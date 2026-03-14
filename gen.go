@@ -164,7 +164,7 @@ func main(){
 				component.File("logger.go").Write(`package component
 
 import (
-	"community/internal/config"
+	"` + name + `/internal/config"
 
 	"github.com/wednis/gosdk"
 	"go.uber.org/zap"

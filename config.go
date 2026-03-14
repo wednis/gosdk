@@ -28,22 +28,6 @@ func bindFromMap(m map[string]any, result any) error {
 	return decoder.Decode(m)
 }
 
-func bindYAMLConfig(data []byte, cfgptr any) error {
-	var m map[string]any
-	if err := yaml.Unmarshal(data, &m); err != nil {
-		return err
-	}
-	return bindFromMap(m, cfgptr)
-}
-
-func bindJSONConfig(data []byte, cfgptr any) error {
-	var m map[string]any
-	if err := json.Unmarshal(data, &m); err != nil {
-		return err
-	}
-	return bindFromMap(m, cfgptr)
-}
-
 // 读取配置文件
 //   - path 配置文件路径
 //   - cfgptr 配置结构体指针（需要字段全部大写）
@@ -55,12 +39,17 @@ func BindConfig(path string, cfgptr any) error {
 	if err != nil {
 		return err
 	}
+	var m map[string]any
 	switch filepath.Ext(path) {
 	case ".json":
-		return bindJSONConfig(data, cfgptr)
+		err = json.Unmarshal(data, &m)
 	case ".yaml":
-		return bindYAMLConfig(data, cfgptr)
+		err = yaml.Unmarshal(data, &m)
 	default:
 		return defines.ErrUnSupported
 	}
+	if err != nil {
+		return err
+	}
+	return bindFromMap(m, cfgptr)
 }
