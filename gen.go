@@ -212,6 +212,12 @@ func IsDebug() bool {
 		folder.Dir("test") // 测试文件
 		folder.Dir("web")  // 前端项目
 	}
+	folder.File(".gitignore").Write(`.vscode/
+build/
+config/
+test/
+web/
+`)
 	folder.File("README.md").Write("# " + name + `
 `)
 	folder.File("go.mod").Write("module " + name + `
