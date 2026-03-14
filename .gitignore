@@ -1,4 +1,4 @@
 .vscode/
-.cmd/
-.modules/
-.test/
+cmd/
+modules/
+test/
