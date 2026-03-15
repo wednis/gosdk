@@ -110,7 +110,7 @@ func Inject(v ...any) *DIContainer {
 		if len(newfuncs) == len(funcs) || len(newfuncs) == 0 {
 			break
 		}
-		copy(funcs, newfuncs)
+		funcs = newfuncs // 原先使用copy，忘了短copy到长，长度还是长
 	}
 	return dic
 }
@@ -137,7 +137,7 @@ func (dic *DIContainer) Invoke(funcs ...any) *DIContainer {
 			}
 			// 如果能注入
 			if inject {
-				rv_fn.Call(deps)
+				rv_fn.Call(deps) // TODO 需要检测执行结果是否含有error并不为nil
 			}
 		}
 	}

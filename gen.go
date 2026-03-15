@@ -132,23 +132,30 @@ func vscodeGoDevWeb(root string, name string) *GenDir {
 		{
 			server := cmd.Dir("server")
 			{
-				server.File("inject.go").Write(`package main
+				/*
+									server.File("inject.go").Write(`package main
 
-import "github.com/wednis/gosdk"
+					import "github.com/wednis/gosdk"
 
-func inject(deps ...any) {
-	err := gosdk.Inject(deps...).Invoke(
-	    // to be completed
-	).Err()
-	if err != nil{
-	    panic("failed to inject dependencies, error: " + err.Error())
-	}
-}
-`)
+					func inject(deps ...any) {
+						err := gosdk.Inject(deps...).Invoke(
+						    // to be completed
+						).Err()
+						if err != nil{
+						    panic("failed to inject dependencies, error: " + err.Error())
+						}
+					}
+					`)
+				*/
 				server.File("main.go").Write(`package main
 
+import "` + name + `/internal/config"
+
 func main(){
+    config.OnDebug() // 开启Debug
+    // to be completed
 	inject()
+	// to be completed
 }
 `)
 			}

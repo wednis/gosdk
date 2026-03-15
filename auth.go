@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	"github.com/golang-jwt/jwt"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var (
@@ -34,4 +35,17 @@ func VerifyJWT(s string, key string) (map[string]any, error) {
 		return jwtmap, nil
 	}
 	return nil, ErrJWTInvaild
+}
+
+// 生成12级别的Bcrypt密码加密
+func NewBcrypt(password []byte) ([]byte, error) {
+	return bcrypt.GenerateFromPassword(password, 12)
+}
+
+// 验证密码
+func VerifyBcrypt(password []byte, hash []byte) bool {
+	if bcrypt.CompareHashAndPassword(hash, password) != nil {
+		return true
+	}
+	return false
 }

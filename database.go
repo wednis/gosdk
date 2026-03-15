@@ -19,6 +19,9 @@ func initDefaultDB(db *gorm.DB) {
 }
 
 func NewMysqlGorm(username string, password string, dbname string, config *gorm.Config) (*gorm.DB, error) {
+	if config == nil {
+		config = &gorm.Config{}
+	}
 	db, err := gorm.Open(mysql.Open(fmt.Sprintf("%s:%s@tcp(127.0.0.1:3306)/%s?charset=utf8mb4&parseTime=True&loc=Local", username, password, dbname)), config)
 	if err != nil {
 		return nil, err
