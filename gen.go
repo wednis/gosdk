@@ -149,10 +149,23 @@ func vscodeGoDevWeb(root string, name string) *GenDir {
 				*/
 				server.File("main.go").Write(`package main
 
-import "` + name + `/internal/config"
+import (
+    "` + name + `/internal/config"
+	"path/filepath"
+)
 
 func main(){
     config.OnDebug() // 开启Debug
+
+	execdir, err := gosdk.GetExecDir()
+	if err != nil {
+		panic(err.Error())
+	}
+	cfg, err := config.InitConfig(filepath.Join(execdir, "config"))
+	if err != nil {
+		panic(err.Error())
+	}
+
     // to be completed
 	inject()
 	// to be completed
@@ -167,6 +180,18 @@ func main(){
 			component := internal.Dir("component") // 组件（数据库 redis等）
 			{
 				component.File("database.go").Write(`package component
+
+import "gorm.io/gorm"
+
+type DB struct {
+	*gorm.DB
+}
+
+func NewDatabase() (*DB, error) {
+    // to be completed
+	return nil, nil
+}
+
 `)
 				component.File("logger.go").Write(`package component
 
@@ -177,8 +202,24 @@ import (
 	"go.uber.org/zap"
 )
 
-func NewLogger() *zap.Logger {
-	return gosdk.NewZapLogger(config.IsDebug())
+type Logger struct {
+	*zap.Logger
+}
+
+func NewLogger() *Logger {
+	return &Logger{gosdk.NewZapLogger(config.IsDebug())}
+}
+`)
+				component.File("validator.go").Write(`package component
+
+import "github.com/go-playground/validator/v10"
+
+type Validator struct {
+    *validator.Validate
+}
+
+func NewValidator() *Validator {
+    return &Validator{validator.New()}
 }
 `)
 			}
@@ -186,7 +227,45 @@ func NewLogger() *zap.Logger {
 			{
 				config.File("config.go").Write(`package config
 
+import (
+	"sync"
+
+	"github.com/wednis/gosdk"
+)
+
 type Config struct {
+    // to be completed
+
+	debug  bool
+	locker sync.RWMutex
+}
+
+// 开启DEBUG
+func (cfg *Config) OnDebug() {
+	cfg.locker.Lock()
+	cfg.debug = true
+	cfg.locker.Unlock()
+}
+
+// 关闭DEBUG
+func (cfg *Config) OffDebug() {
+	cfg.locker.Lock()
+	cfg.debug = false
+	cfg.locker.Unlock()
+}
+
+// 获取DEBUG状态
+func (cfg *Config) IsDebug() bool {
+	cfg.locker.RLock()
+	defer cfg.locker.RUnlock()
+	return debug
+}
+
+func NewConfig(path string) (*Config, error) {
+	cfg := &Config{
+	    // to be completed
+	}
+	return cfg, gosdk.BindConfig(path, cfg)
 }
 `)
 				config.File("debug.go").Write(`package config

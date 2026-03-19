@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	ErrJWTInvaildMethod = errors.New("invaild method in jwt")
-	ErrJWTInvaild       = errors.New("jwt invaild")
+	ErrJWTInvalidMethod = errors.New("invalid method in jwt")
+	ErrJWTInvalid       = errors.New("jwt invalid")
 )
 
 // 生成默认SigningMethodHS256（HMAC-SHA家族）的JWT
@@ -24,7 +24,7 @@ func VerifyJWT(s string, key string) (map[string]any, error) {
 	token, err := jwt.Parse(s, func(token *jwt.Token) (any, error) {
 		// 验证算法是否是HMAC-SHA家族内的（HS256就是）
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, ErrJWTInvaildMethod
+			return nil, ErrJWTInvalidMethod
 		}
 		return []byte(key), nil
 	})
@@ -34,17 +34,17 @@ func VerifyJWT(s string, key string) (map[string]any, error) {
 	if jwtmap, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
 		return jwtmap, nil
 	}
-	return nil, ErrJWTInvaild
+	return nil, ErrJWTInvalid
 }
 
-// 生成12级别的Bcrypt密码加密
-func NewBcrypt(password []byte) ([]byte, error) {
-	return bcrypt.GenerateFromPassword(password, 12)
+// 生成Bcrypt加密
+func NewBcrypt(source []byte) ([]byte, error) {
+	return bcrypt.GenerateFromPassword(source, 12)
 }
 
-// 验证密码
-func VerifyBcrypt(password []byte, hash []byte) bool {
-	if bcrypt.CompareHashAndPassword(hash, password) != nil {
+// 验证Bcrypt加密
+func VerifyBcrypt(source []byte, hash []byte) bool {
+	if bcrypt.CompareHashAndPassword(hash, source) != nil {
 		return true
 	}
 	return false

@@ -31,6 +31,9 @@ func NewMysqlGorm(username string, password string, dbname string, config *gorm.
 }
 
 func NewSqlite3Gorm(path string, config *gorm.Config) (*gorm.DB, error) {
+	if config == nil {
+		config = &gorm.Config{}
+	}
 	db, err := gorm.Open(sqlite.Open(path), config)
 	if err != nil {
 		return nil, err
