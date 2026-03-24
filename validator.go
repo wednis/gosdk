@@ -78,10 +78,11 @@ func ValidatePassword(password string) bool {
 }
 
 // 验证邮箱是否合法
-//   - 长度不得大于等于255
+//   - 长度 5 - 254（含）
 //   - 正则匹配规则 `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
 func ValidateEmail(email string) bool {
-	if len(email) >= 255 {
+	count := len(email)
+	if count < 5 || count > 254 {
 		return false
 	}
 

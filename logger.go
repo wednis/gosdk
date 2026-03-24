@@ -2,6 +2,7 @@ package gosdk
 
 import (
 	"os"
+	"path/filepath"
 	"time"
 
 	"go.uber.org/zap"
@@ -51,7 +52,8 @@ func InitLogger(logPath string, level zapcore.Level) *zap.Logger {
 
 // 获取zap日志记录器
 //   - debug 指定是否需要debug级别（开发环境时使用）
-func NewZapLogger(debug bool) *zap.Logger {
+//   - logdir 指定日志文件目录
+func NewZapLogger(debug bool, logdir string) *zap.Logger {
 	// 控制台打印设置
 	consoleConfig := zapcore.EncoderConfig{
 		TimeKey:        "time",
@@ -72,7 +74,7 @@ func NewZapLogger(debug bool) *zap.Logger {
 
 	consoleEncoder := zapcore.NewConsoleEncoder(consoleConfig)
 	fileEncoder := zapcore.NewJSONEncoder(fileconfig)
-	file, err := os.Create("./app-" + time.Now().Format("2006-01-02--15-04-05") + ".log")
+	file, err := os.Create(filepath.Join(logdir, "app-"+time.Now().Format("2006-01-02--15-04-05")+".log"))
 	if err != nil {
 		panic("unable to create log file")
 	}

@@ -86,7 +86,6 @@ func (d *GenDir) Gen() error {
 
 func vscodeGoDevWeb(root string, name string) *GenDir {
 	folder := &GenDir{Path: path.Join(root, name)}
-	// TODO
 	{
 		_vscode := folder.Dir(".vscode")
 		_vscode.File("settings.json").Write(`{
@@ -132,21 +131,6 @@ func vscodeGoDevWeb(root string, name string) *GenDir {
 		{
 			server := cmd.Dir("server")
 			{
-				/*
-									server.File("inject.go").Write(`package main
-
-					import "github.com/wednis/gosdk"
-
-					func inject(deps ...any) {
-						err := gosdk.Inject(deps...).Invoke(
-						    // to be completed
-						).Err()
-						if err != nil{
-						    panic("failed to inject dependencies, error: " + err.Error())
-						}
-					}
-					`)
-				*/
 				server.File("main.go").Write(`package main
 
 import (
@@ -155,7 +139,7 @@ import (
 )
 
 func main(){
-    config.OnDebug() // 开启Debug
+    config.OnTest() // 开启Test
 
 	execdir, err := gosdk.GetExecDir()
 	if err != nil {
@@ -177,21 +161,22 @@ func main(){
 		folder.Dir("config") // 配置文件存放
 		internal := folder.Dir("internal")
 		{
-			component := internal.Dir("component") // 组件（数据库 redis等）
+			component := internal.Dir("component") // 具体组件
 			{
 				component.File("database.go").Write(`package component
 
-import "gorm.io/gorm"
+import (
+	"github.com/wednis/gosdk"
+	"gorm.io/gorm"
+)
 
-type DB struct {
-	*gorm.DB
+func NewDatabase() (*gorm.DB, error) {
+	db, err := gosdk.NewMysqlGorm("root", "root", "test", nil)
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
 }
-
-func NewDatabase() (*DB, error) {
-    // to be completed
-	return nil, nil
-}
-
 `)
 				component.File("logger.go").Write(`package component
 
@@ -202,98 +187,137 @@ import (
 	"go.uber.org/zap"
 )
 
-type Logger struct {
-	*zap.Logger
-}
-
-func NewLogger() *Logger {
-	return &Logger{gosdk.NewZapLogger(config.IsDebug())}
+func NewLogger(cfg *config.Config) *zap.Logger {
+	return gosdk.NewZapLogger(cfg.IsTest())
 }
 `)
 				component.File("validator.go").Write(`package component
 
 import "github.com/go-playground/validator/v10"
 
-type Validator struct {
-    *validator.Validate
-}
-
-func NewValidator() *Validator {
-    return &Validator{validator.New()}
+func NewValidator() *validator.Validate {
+	return validator.New()
 }
 `)
 			}
-			config := internal.Dir("config") // 读取 /config 下的配置文件数据
+			config := internal.Dir("config") // 读取配置文件数据
 			{
 				config.File("config.go").Write(`package config
 
 import (
-	"sync"
-
 	"github.com/wednis/gosdk"
 )
 
-type Config struct {
+type ExternalConfig struct {
     // to be completed
-
-	debug  bool
-	locker sync.RWMutex
 }
 
-// 开启DEBUG
-func (cfg *Config) OnDebug() {
-	cfg.locker.Lock()
-	cfg.debug = true
-	cfg.locker.Unlock()
+type InternalConfig struct {
+	// to be completed
 }
 
-// 关闭DEBUG
-func (cfg *Config) OffDebug() {
-	cfg.locker.Lock()
-	cfg.debug = false
-	cfg.locker.Unlock()
+type GlobalData struct {
+	// to be completed
 }
 
-// 获取DEBUG状态
-func (cfg *Config) IsDebug() bool {
-	cfg.locker.RLock()
-	defer cfg.locker.RUnlock()
-	return debug
+type TestConfig struct {
+	// to be completed
 }
 
-func NewConfig(path string) (*Config, error) {
-	cfg := &Config{
-	    // to be completed
+type Config struct {
+	External ExternalConfig
+	Internal InternalConfig
+	Global   GlobalData
+	test     *TestConfig
+}
+
+func (cfg *Config) OnTest() {
+	cfg.test = &TestConfig{
+		// to be completed
 	}
-	return cfg, gosdk.BindConfig(path, cfg)
-}
-`)
-				config.File("debug.go").Write(`package config
-
-var debug bool
-
-func OnDebug() {
-	debug = true
 }
 
-func OffDebug() {
-	debug = false
+func (cfg *Config) IsTest() bool {
+	return cfg.test != nil
 }
 
-func IsDebug() bool {
-	return debug
+func (cfg *Config) TestConfig() *TestConfig {
+	return cfg.test
+}
+
+func InitConfig(path string) (*Config, error) {
+	cfg := &Config{
+		External: ExternalConfig{
+			// to be completed
+		},
+		Internal: InternalConfig{
+			// to be completed
+		},
+		Global: GlobalData{
+			// to be completed
+		},
+		test: nil,
+	}
+	return cfg, gosdk.BindConfig(path, &cfg.External)
 }
 `)
 			}
-			internal.Dir("handler")    // HTTP请求处理器
-			internal.Dir("service")    // 业务逻辑层
-			internal.Dir("repository") // 数据访问层
-			internal.Dir("model")      // 数据模型
+			internal.Dir("dto")                // 数据传输层
+			handler := internal.Dir("handler") // HTTP请求处理器
+			{
+				handler.Dir("request")              // 请求数据相关
+				response := handler.Dir("response") // 响应数据相关
+				{
+					response.File("response").Write(`package response
+import "` + name + `/pkg/errcode"
+
+type Response struct {
+	Code errcode.Code ` + "`" + `json:"code"` + "`" + `
+	Data any          ` + "`" + `json:"data"` + "`" + `
+}
+`)
+				}
+			}
+			internal.Dir("service")          // 业务逻辑层
+			internal.Dir("repository")       // 数据访问层
+			internal.Dir("model")            // 数据库数据模型
+			internal.Dir("infrastructure")   // 基础设施 存放接口类型依赖
+			routes := internal.Dir("routes") // 路由注册
+			{
+				routes.File("routes.go").Write(`package routes
+
+import (
+	"github.com/gin-gonic/gin"
+)
+
+func InitRoutes(
+	engine *gin.Engine,
+	// to be completed
+) {
+	// to be completed
+}
+`)
+			}
 			internal.Dir("middleware") // 中间件
 		}
 		pkg := folder.Dir("pkg")
 		{
-			pkg.Dir("utils") // 通用工具函数
+			pkg.Dir("utils")              // 通用工具函数
+			errcode := pkg.Dir("errcode") // 错误码
+			{
+				errcode.File("errcode.go").Write(`package errcode
+
+type Code int
+
+const (
+	Success Code = 0
+)
+`)
+			}
+		}
+		script := folder.Dir("script") // 存放脚本
+		{
+			script.File("errcode.py") // 错误码生成脚本
 		}
 		folder.Dir("test") // 测试文件
 		folder.Dir("web")  // 前端项目
@@ -319,4 +343,12 @@ func GenVscodeGoDevWeb(root string, name string) error {
 		return vscodeGoDevWeb(root, name).Gen()
 	}
 	return errors.New("root not exists")
+}
+
+// 在可执行文件所在的目录下生成预设的目录及文件
+//   - config 存放配置文件
+//   - log 存放日志
+func GenExecFileDir() error {
+	// TODO
+	return nil
 }
