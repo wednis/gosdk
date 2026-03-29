@@ -281,7 +281,6 @@ type Response struct {
 			internal.Dir("service")          // 业务逻辑层
 			internal.Dir("repository")       // 数据访问层
 			internal.Dir("model")            // 数据库数据模型
-			internal.Dir("infrastructure")   // 基础设施 存放接口类型依赖
 			routes := internal.Dir("routes") // 路由注册
 			{
 				routes.File("routes.go").Write(`package routes

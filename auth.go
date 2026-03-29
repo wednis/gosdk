@@ -3,7 +3,9 @@ package gosdk
 // 身份验证相关
 
 import (
+	"crypto/rand"
 	"errors"
+	"math/big"
 
 	"github.com/golang-jwt/jwt"
 	"golang.org/x/crypto/bcrypt"
@@ -48,4 +50,20 @@ func VerifyBcrypt(source []byte, hash []byte) bool {
 		return true
 	}
 	return false
+}
+
+// 生成6位随机验证码
+func NewCaptcha() []byte {
+	const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+	const length = 6
+	code := make([]byte, length)
+	charsetLen := big.NewInt(int64(len(charset)))
+	for i := range length {
+		num, err := rand.Int(rand.Reader, charsetLen)
+		if err != nil {
+			panic(err)
+		}
+		code[i] = charset[num.Int64()]
+	}
+	return code
 }
