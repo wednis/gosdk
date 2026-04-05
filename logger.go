@@ -63,45 +63,59 @@ func NewZapLogger(debug bool, logdir string) *zap.Logger {
 		MessageKey:     "msg",
 		StacktraceKey:  "stacktrace",
 		LineEnding:     zapcore.DefaultLineEnding,
-		EncodeTime:     zapcore.TimeEncoderOfLayout("2006-01-02 15:04:05"),
+		EncodeTime:     zapcore.TimeEncoderOfLayout("2006-01-02 15:04:05.000 -0700"),
 		EncodeLevel:    zapcore.CapitalColorLevelEncoder, // 大写 带颜色
 		EncodeDuration: zapcore.SecondsDurationEncoder,
 		EncodeCaller:   zapcore.ShortCallerEncoder,
 	}
 	// 日志文件打印设置
 	fileconfig := zap.NewDevelopmentEncoderConfig()
-	fileconfig.EncodeTime = zapcore.TimeEncoderOfLayout("2006-01-02 15:04:05")
+	fileconfig.EncodeTime = zapcore.TimeEncoderOfLayout("2006-01-02 15:04:05.000 -0700")
 
 	consoleEncoder := zapcore.NewConsoleEncoder(consoleConfig)
 	fileEncoder := zapcore.NewJSONEncoder(fileconfig)
+
+	// 创建日志目录及目录文件
+	err := os.MkdirAll(logdir, 0755)
+	if err != nil {
+		panic(err.Error())
+	}
 	file, err := os.Create(filepath.Join(logdir, "app-"+time.Now().Format("2006-01-02--15-04-05")+".log"))
 	if err != nil {
-		panic("unable to create log file")
+		panic(err.Error())
 	}
-	fileSync := zapcore.AddSync(file)
 
+	// stderr 和 file
 	cores := []zapcore.Core{
-		// 错误日志输出到stderr
-		zapcore.NewCore(consoleEncoder, zapcore.Lock(os.Stderr), zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
-			return lvl >= zapcore.ErrorLevel
-		})),
-		// 全级别日志储存到文件
-		zapcore.NewCore(fileEncoder, fileSync, zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
-			return lvl >= zapcore.DebugLevel
-		})),
+		zapcore.NewCore(
+			consoleEncoder,
+			zapcore.Lock(os.Stderr),
+			zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
+				return lvl >= zapcore.ErrorLevel // 开发/生产环境中 stderr 打印ERROR级别及以上日志
+			})),
+		zapcore.NewCore(
+			fileEncoder,
+			zapcore.AddSync(file),
+			zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
+				return lvl >= zapcore.InfoLevel // 开发/生产环境中 file 输出INFO级别及以上信息
+			})),
 	}
 
-	// 根据是否需要debug判断
+	// 根据是否需要debug判断 stdout 日志处理
 	if debug {
-		cores = append(cores, zapcore.NewCore(consoleEncoder, zapcore.Lock(os.Stdout), zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
-			return lvl >= zapcore.DebugLevel
-		})))
+		cores = append(cores, zapcore.NewCore(
+			consoleEncoder,
+			zapcore.Lock(os.Stdout),
+			zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
+				return lvl >= zapcore.DebugLevel // 开发环境中控制台打印DEBUG级别及以上日志
+			})))
 	} else {
-		cores = append(cores, zapcore.NewCore(consoleEncoder, zapcore.Lock(os.Stdout), zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
-			return lvl >= zapcore.InfoLevel
-		})))
+		cores = append(cores, zapcore.NewCore(
+			consoleEncoder,
+			zapcore.Lock(os.Stdout),
+			zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
+				return lvl == zapcore.WarnLevel // 生产环境中 stdout 仅打印WARN级别日志
+			})))
 	}
-	core := zapcore.NewTee(cores...)
-
-	return zap.New(core)
+	return zap.New(zapcore.NewTee(cores...))
 }
